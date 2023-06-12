@@ -32,10 +32,3 @@ output_window.pack()
 
 # Run the main loop
 window.mainloop()
-
-In this code, we import the necessary libraries (tkinter, datetime, pytz, and random). The generate_random_timezone function is called when the button is clicked. It selects a random timezone from the list of all available timezones using random.choice. It then retrieves the current time in that timezone using datetime.now and the pytz.timezone function.
-
-The output string is formatted with the chosen timezone and the current time. It is then inserted into the output window using output_window.insert. The output window is a Text widget that displays the generated timezone and current time.
-
-When you run the code, the main window will appear with a button labeled "Generate Random Timezone". Clicking this button will generate a random timezone and display it along with the current time in the output window.
-
