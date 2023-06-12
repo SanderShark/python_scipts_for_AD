@@ -10,36 +10,45 @@ letter_chars = string.ascii_letters
 digit_chars = string.digits
 special_chars = string.punctuation
 alphabet = letter_chars + digit_chars + special_chars
+# Global variable to store password length
+pwd_length = None
 
 #tool functions
-def pwd_gen():
-    # input is a local variable (needs validation)
+
+def password_length():
+    global pwd_length
     pwd_length = sd.askinteger("Input", "Enter the password length:")
 
-    # local vars
+def pwd_gen():
+    output_window.delete("1.0", tk.END)
+    global pwd_length
+    
+    if pwd_length is None:
+        password_length()  # Prompt for password length if not previously entered
+
     pwd = ''
     complexity_met = False
     
     while not complexity_met:
-        # character iteration
         pwd = ''.join(secrets.choice(alphabet) for _ in range(pwd_length))
-
-        # complexity requirements check
+        
         if any(char in special_chars for char in pwd) and sum(char in digit_chars for char in pwd) >= 2:
             complexity_met = True
-
+    
     output_window.insert(tk.END, "Password: \n" + str(pwd))
 
+
+
+def repeat_pwd_gen():
+    output_window.delete("1.0", tk.END)
+    pwd_gen()  # Call the pwd_gen function
 #GUI button functions, could simplify
 
-def function2():
-    password_length()
 
-def function3():
-    output_window.insert(tk.END, "End of function!\n")
 
-def function4():
-    output_window.insert(tk.END, "End of function!\n")
+
+def clear_window():
+    output_window.delete("1.0", tk.END)
 
 # Create the main window
 window = tk.Tk()
@@ -49,14 +58,11 @@ window.title("Tools for tools")
 button1 = tk.Button(window, text="Password Generator", command=pwd_gen)
 button1.pack()
 
-button2 = tk.Button(window, text="Function 2", command=function2)
-button2.pack()
-
-button3 = tk.Button(window, text="Function 3", command=function3)
-button3.pack()
-
-button4 = tk.Button(window, text="Function 4", command=function4)
+button4 = tk.Button(window, text="clear", command=clear_window)
 button4.pack()
+
+button5 = tk.Button(window, text="Repeat", command=repeat_pwd_gen)
+button5.pack()
 
 # Create the output window
 output_window = tk.Text(window, height=10, width=40)
