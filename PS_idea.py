@@ -1,145 +1,121 @@
-import subprocess, secrets, string, active_directory
+import subprocess
+import secrets
+import string
+import active_directory
 import tkinter as tk
 
+# Replace 'Get-Process' with the command that you want to run in PowerShell.
+# subprocess.call('C:\Windows\System32\powershell.exe Get-Process', shell=False)
 
-# replace 'Get-Process' with the command that yoy want to run in powershell.
-# Which means I have to program each command individually through variables.
-###     subprocess.call('C:\Windows\System32\powershell.exe Get-Process', shell=False)
+username = ""
 
-
-username=""
-
-# password generator
-
+# Password generator
 def pwd_gen():
-    
     letter_chars = string.ascii_letters
     digit_chars = string.digits
     special_chars = string.punctuation
     alphabet = letter_chars + digit_chars + special_chars
-    # input is a local variable (needs validation)
     pwd_length = 15
 
-    # local vars
-    pwd = ''
+    pwd = ""
     complexity_met = False
-    
-    while not complexity_met:
-        # character iteration
-        pwd = ''.join(secrets.choice(alphabet) for _ in range(pwd_length))
 
-        # complexity requirements check
+    while not complexity_met:
+        pwd = "".join(secrets.choice(alphabet) for _ in range(pwd_length))
         if any(char in special_chars for char in pwd) and sum(char in digit_chars for char in pwd) >= 2:
             complexity_met = True
 
+ps = subprocess.Popen(['powershell'], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 
+output_filename = "output.txt"
 
+def enqueueOutput(out, filename):
+    with open(filename, "w") as file:
+        for line in iter(out.readline, b""):
+            line_str = line.decode("utf-8")
+            file.write(line_str)
+    out.close()
+
+ps_thread = Thread(target=enqueueOutput, args=(ps.stdout, output_filename))
+ps_thread.daemon = True
+ps_thread.start()
+
+def runOutputUntilDone(process, cmd, timeout=20, done_message="done"):
+    res = []
+    process.stdin.write((cmd + ';Write-Host ' + done_message + '\n').encode('utf-8'))
+    process.stdin.flush()
+    try:
+        current_line = ps.stdout.readline().decode("utf-8")
+        while current_line:
+            if current_line.strip() == done_message:
+                return res
+            print("Output from PowerShell process: " + current_line.strip())
+            res.append(current_line)
+            current_line = ps.stdout.readline().decode("utf-8")
+    except Empty:
+        return res
+
+runOutputUntilDone(process=ps, cmd="Write-Host Booting up...", timeout=5, done_message="done")
+
+group_list = runOutputUntilDone(process=ps, cmd="Get-ADGroup", timeout=5, done_message="done")
 
 class Powershell:
-    
-    global adm_user_name = ''
-    global auth_id = ''
-    
-    def sub_process():
-        subprocess.call('C:\Windows\System32\powershell.exe ' + self + '-WindowStyle Hidden')
-        
-    
-    def login_to_adm(sub_process):
-        self.subprocess(self + 'import ActiveDirectory ')
-        self.subprocess(self + 'Get-Credential ')
-        
-        
-    def add_to_group(sub_process):
+    def sub_process(self, cmd):
+        subprocess.call(['C:\Windows\System32\powershell.exe'] + cmd, shell=False)
+
+    def login_to_adm(self):
+        self.sub_process(['import ActiveDirectory'])
+        self.sub_process(['Get-Credential'])
+
+    def add_to_group(self):
         group_name = str(entry2.get())
         user_name = str(entry1.get())
-        self.subprocess(self + 'Add-ADGroupMember -Identity {group_name} -Members {user_name} ' , shell=False)
-        
-    
-    
-    def create_password(sub_process):
+        self.sub_process(['Add-ADGroupMember', '-Identity', group_name, '-Members', user_name], shell=False)
+
+    def create_password(self):
         pwd = pwd_gen()
-        self.sub_process(self,' $NewPwd = ConvertTo-SecureString {pwd} -AsPlainText -Force ', shell=False)
-        
-        
-        
-    def set_password():
-        subprocess.call(self,' Set-ADAccountPassword -Identity {user_name} -NewPassword $NewPwd -Reset ' , shell =False)
-        
-    def unlock_account():
-        subprocess.call(self,' Unlock-ADAccount -Identity {user_name} ', shell=False)
+        self.sub_process(['$NewPwd = ConvertTo-SecureString', pwd, '-AsPlainText -Force'], shell=False)
 
-pwrshl = Powershell() # gotta initiate those classes 
+    def set_password(self):
+        user_name = str(entry1.get())
+        self.sub_process(['Set-ADAccountPassword', '-Identity', user_name, '-NewPassword', '$NewPwd', '-Reset'])
 
-#example use pwrshl.create_password()
+    def unlock_account(self):
+        user_name = str(entry1.get())
+        self.sub_process(['Unlock-ADAccount', '-Identity', user_name])
 
+pwrshl = Powershell()
 
-class AD():
-    def find_user():
-        user = active_directory.find_user (str(entry1.get()))
-    def find_computer():
-        computer = active_directory.find_computer (str(entry1.get()))
-    
-   # def export_users():
-    #   for user in active_directory.search (objectCategory='Person', objectClass='User'):
-     #       return user
-        
-   # def users_in_ou():
-    #    users = active_directory.AD_object ("LDAP://ou=Users,dc=com,dc=example")
-     #   for user in users.search (objectCategory='Person'):
-      #      print user
+class AD:
+    def find_user(self):
+        user = active_directory.find_user(str(entry1.get()))
 
-
-# need to save these to file, going to be to large for output
-    #def list_groups():
-     ##      print group.cn
-        
-    #def user_in_group():
-     #   me = active_directory.find_user (usern_input) # defaults to current user
-      #  for group in me.memberOf:
-       #     print "Members of group", group.cn
-        #for group_member in group.member:
-         #   print "  ", group_member
+    def find_computer(self):
+        computer = active_directory.find_computer(str(entry1.get()))
 
 actvdir = AD()
 
-
-#class None:
-## this command turns a password into a secure string
- #$NewPwd = ConvertTo-SecureString "MyComplexPassword@123" -AsPlainText -Force
- 
-# Setting the users password
-
- #   Set-ADAccountPassword -Identity user03 -NewPassword $NewPwd -Reset
-
-
-
-
-
-
-
-
-
-
-
-
-### tkinter window stuff
-
-#
-# need to figure out this entry1.get()
-
-# both entrys need to end up in the funtions above
-
-
-
-#
-
-# use output.delete("1.0", tk.END) for output delete at beggining of function
-
-#general clear button
 def clear_output():
     output.delete("1.0", tk.END)
 
-# Create input fields
+def execute_function():
+    selected_function = function_dropdown.get()
+    if selected_function == "Add User to Group":
+        pwrshl.add_to_group()
+    elif selected_function == "Unlock Account":
+        pwrshl.unlock_account()
+    elif selected_function == "Generate Random Password":
+        pwrshl.pwd_gen()
+    elif selected_function == "Set Generated Password to User":
+        pwrshl.set_password()
+    elif selected_function == "Find User":
+        actvdir.find_user()
+    elif selected_function == "Find Computer":
+        actvdir.find_computer()
+
+window = tk.Tk()
+window.title("PowerShell Functions")
+
 label1 = tk.Label(window, text="Input 1:")
 label1.pack()
 entry1 = tk.Entry(window)
@@ -150,25 +126,27 @@ label2.pack()
 entry2 = tk.Entry(window)
 entry2.pack()
 
-# Create function buttons
-group_add_button = tk.Button(window, text="Add User(input 1) to Group(input 2)", command=pwrshl.add_to_group)
-group_add_button.pack()
+function_options = [
+    "Add User to Group",
+    "Unlock Account",
+    "Generate Random Password",
+    "Set Generated Password to User",
+    "Find User",
+    "Find Computer"
+]
 
-unlk_act = tk.Button(window, text="Unlock Account(input 1)", command=pwrshl.unlock_account)
-unlk_act.pack()
+function_dropdown = tk.StringVar(window)
+function_dropdown.set(function_options[0])
+dropdown_menu = tk.OptionMenu(window, function_dropdown, *function_options)
+dropdown_menu.pack()
 
-pwd_button = tk.Button(window, text="Generate Random Password", command=pwrshl.pwd_gen)
-pwd_button.pack()
-
-set_pwd = tk.Button(window, text="Set Generated Password to User(input 1)", command=pwrshl.set_password)
-set_pwd.pack()
+execute_button = tk.Button(window, text="Execute", command=execute_function)
+execute_button.pack()
 
 clear_button = tk.Button(window, text="Clear Output", command=clear_output)
 clear_button.pack()
 
-# Create output window
 output = tk.Text(window, height=10, width=30)
 output.pack()
 
-# Start the main event loop
 window.mainloop()
