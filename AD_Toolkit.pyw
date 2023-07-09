@@ -83,14 +83,13 @@ def lock_status():
     output_text.insert(tk.END, output)
 
 
-current_group_list = get_ad_groups()
-
 
 def execute_function():
     selected_page = notebook.nametowidget(notebook.select())
     selected_function = notebook.tab(notebook.select(), "text")
 
-
+#functions in elif with page name as == 
+#error handling and output handled by the parent function block
     if selected_function == "Add User to Group":
         group_name = entry4.get()
         user_name = entry3.get()
@@ -121,29 +120,27 @@ def execute_function():
             output_text.insert(tk.END, error)
     
         output_text.see(tk.END)  # Scroll to the end of the output
-
     elif selected_function == "Search Groups":
-        keywords = "*" + entry7.get() + "*"
+        keywords = entry7.get()
 
-        for grp in current_group_list:
-            for member in grp.get_members():
-                if member.get(str(entry7.get())):
-                    output = f"\nGroup: {current_group_list} has the user {member.get(str(entry7.get()))}\n"
-        
-                else:
-                    output = f"\nGroup: {current_group_list} does not have the user {member.get(str(entry7.get()))}\n"
-        if output != "":
-        # Output the search results to the tkinter output window
-            output = "\n".join(output)
-            error = ""
-        else:
-           output = "No matches found."
-           error = ""
+        output = []  # Initialize an empty list
+
+        for line in current_group_list:
+            if keywords in line:
+                output.append(line)
+
+            if output:
+            # Output the search results to the tkinter output window
+                output_text.insert(tk.END, "\n".join(output) + "\n")
+                error = ""
+            else:
+                 output_text.insert(tk.END, "No matches found.\n")
+                 error = ""
     elif selected_function == "Get-Process":
         command = "Get-Process"
         output, error = execute_powershell_command(command)
-
     elif selected_function == "Set License Attribute":
+        
         # these are domain spessific license attribute locations. Would need to set proper attribute for extended use.
         #check license
         ## adding this here: get-ADUser -Identity {user_name} -extensionAttribute10
@@ -158,6 +155,11 @@ def execute_function():
             print("Error messages:", error)
         output_text.delete("1.0", tk.END)
         output_text.insert(tk.END, output)
+
+    elif selected_function == "Last Password Change":
+        user_name = entry8.get()
+        command = f"Get-ADUser -Identity "{user_name}" -Properties PasswordLastSet | Select-Object -ExpandProperty PasswordLastSet"
+        output, error = execute_powershell_command(command)
 
 
     if error:
@@ -182,11 +184,19 @@ def generate_random_password():
 
     return pwd
 
+
+# execute block below
+
+start_ad()
+current_group_list = get_ad_groups()
+
+
+
 window = tk.Tk()
 window.title("PowerShell Functions")
 
 # Load and display the image
-image_path = "yourimage.jpg"
+image_path = "C:\\Users\\SamSanderson\\Pictures\\resized_asrc.jpg"
 image = Image.open(image_path)
 image_tk = ImageTk.PhotoImage(image)
 image_label = tk.Label(window, image=image_tk)
@@ -208,7 +218,7 @@ function_options = [
     "Generate Random Password",
     "Set Generated Password to User",
     "Search Groups",
-    "Get-Process"
+    "Last Password Change"
 ]
 for function_name in function_options:
     page = ttk.Frame(notebook)
@@ -267,6 +277,12 @@ label9.pack()
 entry7 = tk.Entry(function_pages[5])
 entry7.pack()
 
+# "Last Password Change" page
+label10 = tk.Label(function_pages[6], text="Check when username last changed password:"
+label10.pack()
+entry8 = tk.Entry(function_pages[6])
+entry8.pack()
+
 
 # Execute button
 execute_button = tk.Button(window, text="Execute", command=execute_function)
@@ -285,3 +301,4 @@ scrollbar.config(command=output_text.yview)
 
 # Start the main loop
 window.mainloop()
+
